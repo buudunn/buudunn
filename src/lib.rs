@@ -36,15 +36,15 @@ fn start() -> Result<(), JsValue> {
         
         void main() {
             vec3 red = vec3(1.0, 0.0, 0.0);
-            vec3 green = vec3(0.0, 1.0, 0.0);
+            vec3 yellow = vec3(1.0, 1.0, 0.0);  // Define the yellow color
             vec3 blue = vec3(0.0, 0.0, 1.0);
             
-            vec2 uv = gl_FragCoord.xy / vec2(250.0, 250.0); // adjust the resolution accordingly
+            vec2 uv = gl_FragCoord.xy / vec2(200.0, 200.0); // adjust the resolution accordingly
             
             vec3 rainbowColor = mix(
-                mix(blue, red, uv.x),
-                mix(green, blue, uv.y),
-                mix(red, green, uv.x * uv.y)
+                mix(red, yellow, uv.x),  // Blend red and yellow based on x coordinate
+                mix(blue, yellow, uv.y), // Blend yellow and blue based on y coordinate
+                mix(blue, red, uv.x * uv.y)  // Blend blue and red based on both x and y coordinates
             );
             
             outColor = vec4(rainbowColor, 1.0);
