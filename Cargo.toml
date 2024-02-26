@@ -1,0 +1,16 @@
+[package]
+name = "buudunn"
+version = "0.1.0"
+edition = "2021"
+authors = ["Clover Johnson", "The Buudunn Group"]
+description = "An operating system for the web written in rust"
+
+readme = "README.md"
+repository = "https://github.com/buudunn/buudunn"
+license = "GNU General Public License"
+license-file = "LICENSE"
+
+[dependencies]
+web-sys = "0.3.68"
+wasm-bindgen = "0.2.91"
+glow = "0.13.1"
