@@ -1,6 +1,6 @@
 mod utils;
 mod cmd;
-use utils::{draw_text,backspace,set_canvas_size};
+use utils::{ draw_text, backspace, set_canvas_size };
 
 use std::f64;
 use wasm_bindgen::prelude::*;
@@ -54,6 +54,18 @@ fn start() {
     context.set_fill_style(&JsValue::from_str("#FFFFFF"));
     context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
     context.set_font("14px Gohu");
+
+    let welcome_text =
+r#" ____                  _                   
+| __ ) _   _ _   _  __| |_   _ _ __  _ __
+|  _ \| | | | | | |/ _` | | | | '_ \| '_ \
+| |_) | |_| | |_| | (_| | |_| | | | | | | |
+|____/ \__,_|\__,_|\__,_|\__,_|_| |_|_| |_|
+                                           
+Welcome to \#D8BFD8Buudunn\#FFFFFF! This is an open-sourced, web-based
+mockup of the terminal emulator."#;
+
+    draw_text(welcome_text, &context);
 
     let closure = Closure::wrap(
         Box::new(move |event: web_sys::KeyboardEvent| {

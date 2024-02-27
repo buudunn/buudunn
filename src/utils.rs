@@ -1,4 +1,4 @@
-2use lazy_static::lazy_static;
+use lazy_static::lazy_static;
 use std::sync::Mutex;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -58,49 +58,72 @@ pub fn toggle_input() {
 }
 
 pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
-    if !*IS_INPUT_LOCKED.lock().unwrap() {
-    let mut cursor_pos = *CURSOR_POS.lock().unwrap();
-    let max_x = MAX_POS.lock().unwrap().0;
-    let font_size = *FONT_SIZE.lock().unwrap();
+    //if !*IS_INPUT_LOCKED.lock().unwrap() {
+        let mut cursor_pos = *CURSOR_POS.lock().unwrap();
+        let max_x = MAX_POS.lock().unwrap().0;
+        let font_size = *FONT_SIZE.lock().unwrap();
+        let mut hex_index = 0;
 
-    if text == "\n" {
-        cursor_pos.0 = 10.0;
-        cursor_pos.1 += font_size + 4.0;
-    } else {
-        for ch in text.chars() {
-            if cursor_pos.0 + font_size/2.0 >= max_x {
-                // Check if the cursor is about to go off screen or beyond the max_x
-                cursor_pos.0 = 10.0; // Reset the cursor x
-                cursor_pos.1 += font_size + 4.0; // Increase the cursor y
+        if text == "\n" {
+            cursor_pos.0 = 10.0;
+            cursor_pos.1 += font_size + 4.0;
+        } else {
+            for i in 0..text.len() {
+                if hex_index > 0 {
+                    hex_index -= 1;
+                    continue;
+                }
+                let ch = text.chars().nth(i).unwrap();
+                if ch == '\\' {
+                    let next_hex_chars = text.chars().skip(i + 1).take(7).collect::<String>();
+                    if next_hex_chars.starts_with("#") {
+                        context.set_stroke_style(&JsValue::from_str(&next_hex_chars));
+                        context.set_fill_style(&JsValue::from_str(&next_hex_chars));
+                        hex_index += 7;
+                        continue;
+                    }
+                }
+                if ch == '\n' {
+                    cursor_pos.0 = 10.0;
+                    cursor_pos.1 += font_size + 4.0;
+                    continue;
+                } else {
+                    if cursor_pos.0 + font_size / 2.0 >= max_x {
+                        // Check if the cursor is about to go off screen or beyond the max_x
+                        cursor_pos.0 = 10.0; // Reset the cursor x
+                        cursor_pos.1 += font_size + 4.0; // Increase the cursor y
+                    }
+                    context.fill_text(&ch.to_string(), cursor_pos.0, cursor_pos.1).unwrap(); // Draw the character
+                    cursor_pos.0 += font_size / 2.0; // Increment the cursor x
+                }
             }
-            context.fill_text(&ch.to_string(), cursor_pos.0, cursor_pos.1).unwrap(); // Draw the character
-            cursor_pos.0 += font_size/2.0; // Increment the cursor x
         }
-    }
-    console_log!("x: {} y: {}", cursor_pos.0, cursor_pos.1);
+        context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
+        context.set_fill_style(&JsValue::from_str("#FFFFFF"));
 
-    *CURSOR_POS.lock().unwrap() = (cursor_pos.0, cursor_pos.1); // Update the global cursor x and y value
-}
+        *CURSOR_POS.lock().unwrap() = (cursor_pos.0, cursor_pos.1); // Update the global cursor x and y value
+    //}
 }
 
 pub fn backspace(context: &web_sys::CanvasRenderingContext2d) {
     let mut cursor_pos = *CURSOR_POS.lock().unwrap();
     let max_x = MAX_POS.lock().unwrap().0;
-    let lock_pos = CURSOR_LOCK_POS.lock().unwrap();
+    let _lock_pos = CURSOR_LOCK_POS.lock().unwrap();
     let font_size = *FONT_SIZE.lock().unwrap();
 
-    if cursor_pos.0 - font_size/2.0 < 9.9 && cursor_pos.1 - font_size+4.0 < 20.0 {
-        /* can't backspace */
-    } else {
-        if cursor_pos.0 - font_size/2.0 < 9.0 {
-            cursor_pos.0 = max_x-9.0; // Move cursor to the end of the previous line
-            cursor_pos.1 -= font_size+4.0; // Move cursor up to the previous line
+    if
+        cursor_pos.0 - font_size / 2.0 < 9.9 &&
+        cursor_pos.1 - font_size + 4.0 < 20.0
+    {/* can't backspace */} else {
+        if cursor_pos.0 - font_size / 2.0 < 9.0 {
+            cursor_pos.0 = max_x - 9.0; // Move cursor to the end of the previous line
+            cursor_pos.1 -= font_size + 4.0; // Move cursor up to the previous line
         } else {
-            cursor_pos.0 -= font_size/2.0; // Move cursor left by 8 pixels
+            cursor_pos.0 -= font_size / 2.0; // Move cursor left by 8 pixels
         }
         context.set_stroke_style(&JsValue::from_str("#000000"));
         context.set_fill_style(&JsValue::from_str("#000000"));
-        context.fill_rect(cursor_pos.0, cursor_pos.1-font_size, font_size/2.0, font_size+4.0);
+        context.fill_rect(cursor_pos.0, cursor_pos.1 - font_size, font_size / 2.0, font_size + 4.0);
         context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
         context.set_fill_style(&JsValue::from_str("#FFFFFF"));
         console_log!("x: {} y: {}", cursor_pos.0, cursor_pos.1);
