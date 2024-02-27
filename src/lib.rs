@@ -1,160 +1,125 @@
+use std::f64;
 use wasm_bindgen::prelude::*;
-use web_sys::{WebGl2RenderingContext, WebGlProgram, WebGlShader};
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref CURSOR_X: Mutex<f64> = Mutex::new(10.0);
+    static ref CURSOR_Y: Mutex<f64> = Mutex::new(20.0);
+    static ref MAX_X: Mutex<f64> = Mutex::new(0.0);
+}
+
+#[wasm_bindgen]
+extern "C" {
+    // Use `js_namespace` here to bind `console.log(..)` instead of just
+    // `log(..)`
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+
+    // The `console.log` is quite polymorphic, so we can bind it with multiple
+    // signatures. Note that we need to use `js_name` to ensure we always call
+    // `log` in JS.
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_u32(a: u32);
+
+    // Multiple arguments too!
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn log_many(a: &str, b: &str);
+}
+
+macro_rules! console_log {
+    // Note that this is using the `log` function imported above during
+    // `bare_bones`
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()));
+}
 
 #[wasm_bindgen(start)]
-fn start() -> Result<(), JsValue> {
-    let document = web_sys::window().unwrap().document().unwrap();
+fn start() {
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap();
-    let canvas: web_sys::HtmlCanvasElement = canvas.dyn_into::<web_sys::HtmlCanvasElement>()?;
+    let canvas: web_sys::HtmlCanvasElement = canvas
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .map_err(|_| ())
+        .unwrap();
+
+    canvas.set_width(window.inner_width().unwrap().as_f64().unwrap() as u32);
+    canvas.set_height(window.inner_height().unwrap().as_f64().unwrap() as u32);
 
     let context = canvas
-        .get_context("webgl2")?
+        .get_context("2d")
         .unwrap()
-        .dyn_into::<WebGl2RenderingContext>()?;
+        .unwrap()
+        .dyn_into::<web_sys::CanvasRenderingContext2d>()
+        .unwrap();
 
-    let vert_shader = compile_shader(
-        &context,
-        WebGl2RenderingContext::VERTEX_SHADER,
-        r##"#version 300 es
- 
-        in vec4 position;
+    let max_x = (canvas.width() as f64) - 20.0;
+    *MAX_X.lock().unwrap() = max_x;
 
-        void main() {
-        
-            gl_Position = position;
-        }
-        "##,
-    )?;
+    context.set_fill_style(&JsValue::from_str("#000000"));
+    context.fill_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
 
-    let frag_shader = compile_shader(
-        &context,
-        WebGl2RenderingContext::FRAGMENT_SHADER,
-        r##"#version 300 es
-        
-        precision highp float;
-        out vec4 outColor;
-        
-        void main() {
-            vec3 red = vec3(1.0, 0.0, 0.0);
-            vec3 yellow = vec3(1.0, 1.0, 0.0);  // Define the yellow color
-            vec3 blue = vec3(0.0, 0.0, 1.0);
-            
-            vec2 uv = gl_FragCoord.xy / vec2(200.0, 200.0); // adjust the resolution accordingly
-            
-            vec3 rainbowColor = mix(
-                mix(red, yellow, uv.x),  // Blend red and yellow based on x coordinate
-                mix(blue, yellow, uv.y), // Blend yellow and blue based on y coordinate
-                mix(blue, red, uv.x * uv.y)  // Blend blue and red based on both x and y coordinates
-            );
-            
-            outColor = vec4(rainbowColor, 1.0);
-        }
-        "##,
-    )?;
+    context.set_fill_style(&JsValue::from_str("#FFFFFF"));
+    context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
+    context.set_font("16px unifont");
 
-    let program = link_program(&context, &vert_shader, &frag_shader)?;
-    context.use_program(Some(&program));
+    let closure = Closure::wrap(
+        Box::new(move |event: web_sys::KeyboardEvent| {
+            event.prevent_default();
+            let key = event.key();
 
-    let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
-
-    let position_attribute_location = context.get_attrib_location(&program, "position");
-    let buffer = context.create_buffer().ok_or("Failed to create buffer")?;
-    context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&buffer));
-
-    // Note that `Float32Array::view` is somewhat dangerous (hence the
-    // `unsafe`!). This is creating a raw view into our module's
-    // `WebAssembly.Memory` buffer, but if we allocate more pages for ourself
-    // (aka do a memory allocation in Rust) it'll cause the buffer to change,
-    // causing the `Float32Array` to be invalid.
-    //
-    // As a result, after `Float32Array::view` we have to be very careful not to
-    // do any memory allocations before it's dropped.
-    unsafe {
-        let positions_array_buf_view = js_sys::Float32Array::view(&vertices);
-
-        context.buffer_data_with_array_buffer_view(
-            WebGl2RenderingContext::ARRAY_BUFFER,
-            &positions_array_buf_view,
-            WebGl2RenderingContext::STATIC_DRAW,
-        );
-    }
-
-    let vao = context
-        .create_vertex_array()
-        .ok_or("Could not create vertex array object")?;
-    context.bind_vertex_array(Some(&vao));
-
-    context.vertex_attrib_pointer_with_i32(
-        position_attribute_location as u32,
-        3,
-        WebGl2RenderingContext::FLOAT,
-        false,
-        0,
-        0,
+            console_log!("Key pressed: {}", key);
+            if key.len() == 1 && !event.ctrl_key() && !event.alt_key() && !event.meta_key() {
+                draw_text(&key, &context);
+            } else if key == "Enter" {
+                draw_text("\n", &context);
+            } else if key == "Backspace" {
+                draw_text("BACKSPACE ACTION \n", &context)
+            } else {
+                draw_text(&key, &context);
+            }
+        }) as Box<dyn FnMut(_)>
     );
-    context.enable_vertex_attrib_array(position_attribute_location as u32);
-
-    context.bind_vertex_array(Some(&vao));
-
-    let vert_count = (vertices.len() / 3) as i32;
-    draw(&context, vert_count);
-
-    Ok(())
+    window.add_event_listener_with_callback("keypress", closure.as_ref().unchecked_ref()).unwrap();
+    closure.forget();
 }
 
-fn draw(context: &WebGl2RenderingContext, vert_count: i32) {
-    context.clear_color(0.0, 0.0, 0.0, 1.0);
-    context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
+fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
+    let mut cursor_x = *CURSOR_X.lock().unwrap();
+    let mut cursor_y = *CURSOR_Y.lock().unwrap();
+    let max_x = *MAX_X.lock().unwrap();
 
-    context.draw_arrays(WebGl2RenderingContext::TRIANGLES, 0, vert_count);
-}
-
-pub fn compile_shader(
-    context: &WebGl2RenderingContext,
-    shader_type: u32,
-    source: &str,
-) -> Result<WebGlShader, String> {
-    let shader = context
-        .create_shader(shader_type)
-        .ok_or_else(|| String::from("Unable to create shader object"))?;
-    context.shader_source(&shader, source);
-    context.compile_shader(&shader);
-
-    if context
-        .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
-        .as_bool()
-        .unwrap_or(false)
-    {
-        Ok(shader)
+    if text == "\n" {
+        cursor_x = 10.0;
+        cursor_y += 16.0;
+    } else if text == "BACKSPACE ACTION \n" {
+        if cursor_x - 8.0 < 10.0 && cursor_y - 16.0 < 20.0 {
+            console_log!("Backspace cannot be performed");
+        } else {
+            console_log!("Backspace");
+            if cursor_x < 10.0 {
+                cursor_x = max_x - 8.0; // Move cursor to the end of the previous line
+                cursor_y -= 16.0; // Move cursor up to the previous line
+            } else {
+                cursor_x -= 8.0; // Move cursor left by 8 pixels
+            }
+            context.set_fill_style(&JsValue::from_str("#FFFFFF"));
+            context.clear_rect(cursor_x, cursor_y, 8.0, 16.0); // Clear the area of the character to be deleted
+            *CURSOR_X.lock().unwrap() = cursor_x; // Update the global cursor x value
+            *CURSOR_Y.lock().unwrap() = cursor_y; // Update the global cursor y value
+        }
+        
     } else {
-        Err(context
-            .get_shader_info_log(&shader)
-            .unwrap_or_else(|| String::from("Unknown error creating shader")))
+        for ch in text.chars() {
+            if cursor_x + 8.0 >= max_x {
+                // Check if the cursor is about to go off screen or beyond the max_x
+                cursor_x = 10.0; // Reset the cursor x
+                cursor_y += 16.0; // Increase the cursor y
+            }
+            context.fill_text(&ch.to_string(), cursor_x, cursor_y).unwrap(); // Draw the character
+            cursor_x += 8.0; // Increment the cursor x
+        }
     }
-}
-
-pub fn link_program(
-    context: &WebGl2RenderingContext,
-    vert_shader: &WebGlShader,
-    frag_shader: &WebGlShader,
-) -> Result<WebGlProgram, String> {
-    let program = context
-        .create_program()
-        .ok_or_else(|| String::from("Unable to create shader object"))?;
-
-    context.attach_shader(&program, vert_shader);
-    context.attach_shader(&program, frag_shader);
-    context.link_program(&program);
-
-    if context
-        .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
-        .as_bool()
-        .unwrap_or(false)
-    {
-        Ok(program)
-    } else {
-        Err(context
-            .get_program_info_log(&program)
-            .unwrap_or_else(|| String::from("Unknown error creating program object")))
-    }
+    *CURSOR_X.lock().unwrap() = cursor_x; // Update the global cursor x value
+    *CURSOR_Y.lock().unwrap() = cursor_y; // Update the global cursor y value
 }

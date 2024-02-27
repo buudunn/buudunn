@@ -7,7 +7,6 @@ description = "An operating system for the web written in rust"
 
 readme = "README.md"
 repository = "https://github.com/buudunn/buudunn"
-license = "GNU General Public License"
 license-file = "LICENSE"
 
 [lib]
@@ -15,6 +14,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 js-sys = "0.3.68"
+lazy_static = "1.4.0"
 wasm-bindgen = "0.2.91"
 
 [dependencies.web-sys]
@@ -23,10 +23,9 @@ features = [
   'Document',
   'Element',
   'HtmlCanvasElement',
-  'WebGlBuffer',
-  'WebGlVertexArrayObject',
-  'WebGl2RenderingContext',
-  'WebGlProgram',
-  'WebGlShader',
+  'CanvasRenderingContext2d',
   'Window',
+  "KeyboardEvent",
+  "console",
+  "Event"
 ]
