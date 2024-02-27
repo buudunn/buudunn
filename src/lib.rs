@@ -53,7 +53,7 @@ fn start() {
 
     context.set_fill_style(&JsValue::from_str("#FFFFFF"));
     context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
-    context.set_font("16px Unifont");
+    context.set_font("14px Gohu");
 
     let closure = Closure::wrap(
         Box::new(move |event: web_sys::KeyboardEvent| {
