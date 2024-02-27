@@ -2,6 +2,7 @@ use std::f64;
 use wasm_bindgen::prelude::*;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
+use gloo::{events::EventListener, timers::callback::Timeout};
 
 lazy_static! {
     static ref CURSOR_X: Mutex<f64> = Mutex::new(10.0);
@@ -61,7 +62,7 @@ fn start() {
 
     context.set_fill_style(&JsValue::from_str("#FFFFFF"));
     context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
-    context.set_font("16px unifont");
+    context.set_font("16px Unifont");
 
     let closure = Closure::wrap(
         Box::new(move |event: web_sys::KeyboardEvent| {
@@ -69,6 +70,7 @@ fn start() {
             let key = event.key();
 
             console_log!("Key pressed: {}", key);
+            console_log!("code: {}", event.code());
             if key.len() == 1 && !event.ctrl_key() && !event.alt_key() && !event.meta_key() {
                 draw_text(&key, &context);
             } else if key == "Enter" {
@@ -81,7 +83,6 @@ fn start() {
         }) as Box<dyn FnMut(_)>
     );
     window.add_event_listener_with_callback("keypress", closure.as_ref().unchecked_ref()).unwrap();
-    closure.forget();
 }
 
 fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
