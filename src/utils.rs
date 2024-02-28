@@ -1,4 +1,6 @@
 use lazy_static::lazy_static;
+use std::error;
+use std::error::Error;
 use std::sync::Mutex;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -34,6 +36,7 @@ lazy_static! {
     static ref IS_INPUT_LOCKED: Mutex<bool> = Mutex::new(false);
     static ref MAX_POS: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
     static ref FONT_SIZE: Mutex<f64> = Mutex::new(14.0);
+    static ref CMD_BANK: Mutex<String> = Mutex::new(String::new());
 }
 
 pub fn set_canvas_size(canvas: &web_sys::HtmlCanvasElement, window: &web_sys::Window) {
@@ -46,6 +49,12 @@ pub fn set_canvas_size(canvas: &web_sys::HtmlCanvasElement, window: &web_sys::Wi
 
 pub fn lock_cursor(position: (f64, f64)) {
     *MAX_POS.lock().unwrap() = position;
+    *IS_CURSOR_LOCKED.lock().unwrap() = true;
+}
+
+pub fn lock_cursor_here() {
+    let cursor_pos = *CURSOR_POS.lock().unwrap();
+    *CURSOR_LOCK_POS.lock().unwrap() = cursor_pos;
     *IS_CURSOR_LOCKED.lock().unwrap() = true;
 }
 
@@ -108,12 +117,13 @@ pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
 pub fn backspace(context: &web_sys::CanvasRenderingContext2d) {
     let mut cursor_pos = *CURSOR_POS.lock().unwrap();
     let max_x = MAX_POS.lock().unwrap().0;
-    let _lock_pos = CURSOR_LOCK_POS.lock().unwrap();
+    let lock_pos = CURSOR_LOCK_POS.lock().unwrap();
     let font_size = *FONT_SIZE.lock().unwrap();
 
     if
-        cursor_pos.0 - font_size / 2.0 < 9.9 &&
-        cursor_pos.1 - font_size + 4.0 < 20.0
+        (cursor_pos.0 - font_size / 2.0 < 9.9 &&
+        cursor_pos.1 - font_size + 4.0 < 20.0) || (cursor_pos.0 - font_size / 2.0 < lock_pos.0 &&
+        cursor_pos.1 - font_size + 4.0 < lock_pos.1)
     {/* can't backspace */} else {
         if cursor_pos.0 - font_size / 2.0 < 9.0 {
             cursor_pos.0 = max_x - 9.0; // Move cursor to the end of the previous line
@@ -129,4 +139,25 @@ pub fn backspace(context: &web_sys::CanvasRenderingContext2d) {
         console_log!("x: {} y: {}", cursor_pos.0, cursor_pos.1);
         *CURSOR_POS.lock().unwrap() = (cursor_pos.0, cursor_pos.1); // Update the global cursor x and y value
     }
+}
+
+// cmd bank things
+pub fn add_to_cmd_bank(txt: &str) {
+    let mut cmd_bank = CMD_BANK.lock().unwrap();
+    *cmd_bank += txt;
+}
+
+pub fn remove_last_from_cmd_bank() {
+    let mut cmd_bank = CMD_BANK.lock().unwrap();
+    cmd_bank.pop();
+}
+
+pub fn clear_cmd_bank() {
+    let mut cmd_bank = CMD_BANK.lock().unwrap();
+    cmd_bank.clear();
+}
+
+pub fn get_cmd_bank() -> String {
+    let cmd_bank = CMD_BANK.lock().unwrap();
+    cmd_bank.to_owned()
 }

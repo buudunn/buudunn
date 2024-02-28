@@ -1,7 +1,9 @@
 mod utils;
 mod cmd;
-use utils::{ draw_text, backspace, set_canvas_size };
+use utils::*;
+use cmd::*;
 
+use web_sys::{CanvasRenderingContext2d, Document, Element, Window};
 use std::f64;
 use wasm_bindgen::prelude::*;
 
@@ -56,16 +58,25 @@ fn start() {
     context.set_font("14px Gohu");
 
     let welcome_text =
-r#" ____                  _                   
+        r#" ____                  _                   
 | __ ) _   _ _   _  __| |_   _ _ __  _ __
 |  _ \| | | | | | |/ _` | | | | '_ \| '_ \
 | |_) | |_| | |_| | (_| | |_| | | | | | | |
 |____/ \__,_|\__,_|\__,_|\__,_|_| |_|_| |_|
-                                           
-Welcome to \#D8BFD8Buudunn\#FFFFFF! This is an open-sourced, web-based
-mockup of the terminal emulator."#;
+v0.1.0
+
+Welcome to \#C8A2C8Buudunn\#FFFFFF! This is an open-sourced, web-based
+mockup of the terminal emulator. To learn more, type \#C8A2C8'help about'\#FFFFFF.
+
+"#;
+
+    let user = "buudunn";
+    let host = "localhost";
+    let cwd = "/home/buudunn";
 
     draw_text(welcome_text, &context);
+    draw_text(&format!("\\#90EE90{}@{}: \\#FFFFFF\\#ADD8E6{}\\#FFFFFF \\#FFFF00$ \\#FFFFFF", user, host, cwd), &context);
+    lock_cursor_here();
 
     let closure = Closure::wrap(
         Box::new(move |event: web_sys::KeyboardEvent| {
@@ -74,10 +85,20 @@ mockup of the terminal emulator."#;
 
             if key.len() == 1 && !event.ctrl_key() && !event.alt_key() && !event.meta_key() {
                 draw_text(&key, &context);
+                add_to_cmd_bank(&key);
             } else if key == "Enter" {
-                draw_text("\n", &context);
+                if event.shift_key() {
+                    draw_text("\n", &context);
+                    add_to_cmd_bank("\n");
+                } else {
+                    pass_cmd(&get_cmd_bank(), &context);
+                    draw_text("\n", &context);
+                    draw_text(&format!("\\#90EE90{}@{}: \\#FFFFFF\\#ADD8E6{}\\#FFFFFF \\#FFFF00$ \\#FFFFFF", user, host, cwd), &context);
+                    lock_cursor_here();
+                }
             } else if key == "Backspace" {
                 backspace(&context);
+                remove_last_from_cmd_bank();
             }
         }) as Box<dyn FnMut(_)>
     );
