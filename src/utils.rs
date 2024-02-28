@@ -1,6 +1,4 @@
 use lazy_static::lazy_static;
-use std::error;
-use std::error::Error;
 use std::sync::Mutex;
 use wasm_bindgen::JsValue;
 use wasm_bindgen::prelude::*;
@@ -33,7 +31,7 @@ lazy_static! {
     static ref CURSOR_POS: Mutex<(f64, f64)> = Mutex::new((10.0, 20.0));
     static ref CURSOR_LOCK_POS: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
     static ref IS_CURSOR_LOCKED: Mutex<bool> = Mutex::new(false);
-    static ref IS_INPUT_LOCKED: Mutex<bool> = Mutex::new(false);
+    static ref IS_INPUT_LOCKED: Mutex<bool> = Mutex::new(true);
     static ref MAX_POS: Mutex<(f64, f64)> = Mutex::new((0.0, 0.0));
     static ref FONT_SIZE: Mutex<f64> = Mutex::new(14.0);
     static ref CMD_BANK: Mutex<String> = Mutex::new(String::new());
@@ -41,7 +39,7 @@ lazy_static! {
 
 pub fn set_canvas_size(canvas: &web_sys::HtmlCanvasElement, window: &web_sys::Window) {
     canvas.set_width(window.inner_width().unwrap().as_f64().unwrap() as u32);
-    canvas.set_height(window.inner_height().unwrap().as_f64().unwrap() as u32);
+    canvas.set_height(window.inner_height().unwrap().as_f64().unwrap() as u32 * 10);
     let max_x = (canvas.width() as f64) - 20.0;
     let max_y = (canvas.height() as f64) - 20.0;
     *MAX_POS.lock().unwrap() = (max_x, max_y);
@@ -62,13 +60,20 @@ pub fn unlock_cursor() {
     *IS_CURSOR_LOCKED.lock().unwrap() = false;
 }
 
-pub fn toggle_input() {
-    *IS_INPUT_LOCKED.lock().unwrap() = !*IS_INPUT_LOCKED.lock().unwrap();
+pub fn lock_input() {
+    *IS_INPUT_LOCKED.lock().unwrap() = true;
+}
+
+pub fn unlock_input() {
+    *IS_INPUT_LOCKED.lock().unwrap() = false;
+}
+
+pub fn get_is_input_locked() -> bool {
+    *IS_INPUT_LOCKED.lock().unwrap()
 }
 
 pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
-    //if !*IS_INPUT_LOCKED.lock().unwrap() {
-        let mut cursor_pos = *CURSOR_POS.lock().unwrap();
+    let mut cursor_pos = *CURSOR_POS.lock().unwrap();
         let max_x = MAX_POS.lock().unwrap().0;
         let font_size = *FONT_SIZE.lock().unwrap();
         let mut hex_index = 0;
@@ -111,7 +116,6 @@ pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
         context.set_fill_style(&JsValue::from_str("#FFFFFF"));
 
         *CURSOR_POS.lock().unwrap() = (cursor_pos.0, cursor_pos.1); // Update the global cursor x and y value
-    //}
 }
 
 pub fn backspace(context: &web_sys::CanvasRenderingContext2d) {
