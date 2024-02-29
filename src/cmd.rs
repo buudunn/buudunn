@@ -68,11 +68,26 @@ fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
     let cmds = COMMANDS.lock().unwrap();
     let cmds_help = COMMANDS_HELP.lock().unwrap();
 
+    if let Some(element) = args.get(0) {
+        match element {
+            "about" => {
+                draw_text(r#"TODO"#, &context);
+            },
+            _ => {
+                if let Some(help) = cmds_help.get(command) {
+                    draw_text(&format!("↳ {} - {}\n", command, help), &context);
+                } else {
+                    draw_text(r#"\#FFC0C0Unrecognized command/subcommand. Valid subcommands are 'about'."#, &context);
+                }
+            }
+        }
+    } else {
     for (command, _) in cmds.iter() {
         if let Some(help) = cmds_help.get(command) {
             draw_text(&format!("↳ {} - {}\n", command, help), &context);
         }
     }
+}
     drop(cmds);
     drop(cmds_help);
 }
