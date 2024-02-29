@@ -13,6 +13,7 @@ name = "buudunn"
 version = "0.1.0"
 dependencies = [
  "comma",
+ "console_error_panic_hook",
  "js-sys",
  "lazy_static",
  "wasm-bindgen",
@@ -30,6 +31,16 @@ name = "comma"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55b672471b4e9f9e95499ea597ff64941a309b2cdbffcc46f2cc5e2d971fd335"
+
+[[package]]
+name = "console_error_panic_hook"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
+]
 
 [[package]]
 name = "js-sys"

@@ -35,14 +35,14 @@ impl<T> CommandFn for T where T: Fn(Vec<String>, &CanvasRenderingContext2d) {}
 
 lazy_static! {
     static ref COMMANDS: Mutex<HashMap<String, fn(Vec<String>, &CanvasRenderingContext2d) -> ()>> = Mutex::new(HashMap::new());
-    static ref COMMANDS_HELP: Mutex<HashMap<String, String> = Mutex::new(HashMap::new());
+    static ref COMMANDS_HELP: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
 }
 
 pub fn init_cmd() {
     let mut map = COMMANDS.lock().unwrap();
-    let mut help_map = COMMANDS_HELP.lock().unwrap();
+    let help_map = COMMANDS_HELP.lock().unwrap();
     map.insert("echo".to_string(), |arg, ctx| echo(arg, ctx));
-    map.insert("calc".to_string(), |arg, ctx| echo(arg, ctx));
+    map.insert("calc".to_string(), |arg, ctx| calc(arg, ctx));
     map.insert("help".to_string(), |arg, ctx| help(arg, ctx));
 }
 
@@ -54,11 +54,11 @@ pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     console_log!("{:?}", cmd);
 
     draw_text("\n", &context);
-    if let Some(func) = command_list.get(&cmd.to_string()) {
-        func(args, &context);
-     } else {
-        draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
-    }
+
+    let func = command_list.get(&cmd.to_string()).unwrap();
+    drop(command_list);
+    func(args, &context);
+    //draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
 }
 
 fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
@@ -66,7 +66,7 @@ fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
     let commands_help = COMMANDS_HELP.lock().unwrap();
     for (command, _) in commands.iter() {
         if let Some(help) = commands_help.get(command) {
-            draw_text(format!(" {} - Help: {}", command, help), &context);
+            draw_text(&format!(" {} - Help: {}", command, help), &context);
         }
     }
 }

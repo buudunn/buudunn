@@ -4,6 +4,8 @@ use utils::*;
 use cmd::*;
 use std::f64;
 use wasm_bindgen::prelude::*;
+use console_error_panic_hook;
+use std::panic;
 
 #[wasm_bindgen]
 extern "C" {
@@ -31,6 +33,7 @@ macro_rules! console_log {
 
 #[wasm_bindgen(start)]
 fn start() {
+    panic::set_hook(Box::new(console_error_panic_hook::hook));
     init_cmd();
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
