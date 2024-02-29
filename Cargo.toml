@@ -19,7 +19,7 @@ wasm-bindgen = "0.2.91"
 comma = "1.0.0"
 console_error_panic_hook = "0.1.7"
 once_cell = "1.19.0"
-
+libm = "0.2.8"
 [dependencies.web-sys]
 version = "0.3.4"
 features = [
