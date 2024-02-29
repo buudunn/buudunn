@@ -16,6 +16,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "lazy_static",
+ "once_cell",
  "wasm-bindgen",
  "web-sys",
 ]

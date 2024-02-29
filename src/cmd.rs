@@ -1,10 +1,10 @@
 use crate::utils::*;
 use wasm_bindgen::prelude::*;
 use comma::parse_command;
-use std::collections::HashMap;
 use web_sys::CanvasRenderingContext2d;
 use lazy_static::lazy_static;
-use std::sync::Mutex;
+use std::{sync::Mutex, collections::HashMap};
+use once_cell::sync::Lazy;
 
 #[wasm_bindgen]
 extern "C" {
@@ -30,45 +30,51 @@ macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()));
 }
 
-trait CommandFn: Fn(Vec<String>, &CanvasRenderingContext2d) {}
-impl<T> CommandFn for T where T: Fn(Vec<String>, &CanvasRenderingContext2d) {}
-
-lazy_static! {
-    static ref COMMANDS: Mutex<HashMap<String, fn(Vec<String>, &CanvasRenderingContext2d) -> ()>> = Mutex::new(HashMap::new());
-    static ref COMMANDS_HELP: Mutex<HashMap<String, String>> = Mutex::new(HashMap::new());
-}
+static COMMANDS: Lazy<Mutex<HashMap<String, fn(Vec<String>, &CanvasRenderingContext2d)>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static COMMANDS_HELP: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn init_cmd() {
     let mut map = COMMANDS.lock().unwrap();
-    let help_map = COMMANDS_HELP.lock().unwrap();
+    let mut help_map = COMMANDS_HELP.lock().unwrap();
     map.insert("echo".to_string(), |arg, ctx| echo(arg, ctx));
+    help_map.insert("echo".to_string(), "Prints input to the console.".to_string());
     map.insert("calc".to_string(), |arg, ctx| calc(arg, ctx));
+    help_map.insert("calc".to_string(), "Performs operations on 2 or more numbers.".to_string());
     map.insert("help".to_string(), |arg, ctx| help(arg, ctx));
+    help_map.insert("help".to_string(), "Displays help.".to_string());
+
+    drop(map);
+    drop(help_map);
 }
 
 pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     lock_input();
-    let command_list = COMMANDS.lock().unwrap();
     let mut args = parse_command(cmd_str).expect("Error parsing arguments. Is there an end quote missing?");
     let cmd = args.remove(0);
     console_log!("{:?}", cmd);
 
     draw_text("\n", &context);
-
-    let func = command_list.get(&cmd.to_string()).unwrap();
-    drop(command_list);
-    func(args, &context);
-    //draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
+    let cmds = COMMANDS.lock().unwrap();
+    if let Some(func) = cmds.get(&cmd.to_string()) {
+        let func = func.to_owned();
+        drop(cmds);
+        func(args, &context);
+    } else {
+        draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
+    }
 }
 
 fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
-    let commands = COMMANDS.lock().unwrap();
-    let commands_help = COMMANDS_HELP.lock().unwrap();
-    for (command, _) in commands.iter() {
-        if let Some(help) = commands_help.get(command) {
-            draw_text(&format!(" {} - Help: {}", command, help), &context);
+    let cmds = COMMANDS.lock().unwrap();
+    let cmds_help = COMMANDS_HELP.lock().unwrap();
+
+    for (command, _) in cmds.iter() {
+        if let Some(help) = cmds_help.get(command) {
+            draw_text(&format!("⌞ {} - {}\n", command, help), &context);
         }
     }
+    drop(cmds);
+    drop(cmds_help);
 }
 
 fn calc(args: Vec<String>, context: &CanvasRenderingContext2d) {
