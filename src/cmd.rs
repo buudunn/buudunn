@@ -5,6 +5,7 @@ use web_sys::CanvasRenderingContext2d;
 use lazy_static::lazy_static;
 use std::{sync::Mutex, collections::HashMap, str::FromStr};
 use once_cell::sync::Lazy;
+use eval::eval;
 
 #[wasm_bindgen]
 extern "C" {
@@ -36,12 +37,14 @@ static COMMANDS_HELP: Lazy<Mutex<HashMap<String, String>>> = Lazy::new(|| Mutex:
 pub fn init_cmd() {
     let mut map = COMMANDS.lock().unwrap();
     let mut help_map = COMMANDS_HELP.lock().unwrap();
+    map.insert("help".to_string(), |arg, ctx| help(arg, ctx));
+    help_map.insert("help".to_string(), "Displays help.".to_string());
     map.insert("echo".to_string(), |arg, ctx| echo(arg, ctx));
     help_map.insert("echo".to_string(), "Prints input to the console.".to_string());
     map.insert("calc".to_string(), |arg, ctx| calc(arg, ctx));
     help_map.insert("calc".to_string(), "Performs operations on 2 or more numbers.".to_string());
-    map.insert("help".to_string(), |arg, ctx| help(arg, ctx));
-    help_map.insert("help".to_string(), "Displays help.".to_string());
+    map.insert("evl".to_string(), |arg, ctx| evl(arg, ctx));
+    help_map.insert("evl".to_string(), "Evaluates an expression.".to_string());
 
     drop(map);
     drop(help_map);
@@ -182,4 +185,15 @@ fn calc(args: Vec<String>, context: &CanvasRenderingContext2d) {
 
 fn echo(args: Vec<String>, context: &CanvasRenderingContext2d) {
     draw_text(&format!("{}", args.join(" ")), &context);
+}
+
+fn evl(args: Vec<String>, context: &CanvasRenderingContext2d) {
+    if let Some(element) = args.get(0) {
+        match eval(element) {
+            Some(Value) => draw_text(&format!("{}", Value), &context),
+        }
+        
+    } else {
+        draw_text(r#"\#FFC0C0No expression given. Make sure it's wrapped in quotes."#, &context);
+    }
 }
