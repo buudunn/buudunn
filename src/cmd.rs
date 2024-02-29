@@ -72,13 +72,13 @@ fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
     let cmds_help = COMMANDS_HELP.lock().unwrap();
 
     if let Some(element) = args.get(0) {
-        match element {
+        match element.as_str() {
             "about" => {
                 draw_text(r#"TODO"#, &context);
             },
             _ => {
-                if let Some(help) = cmds_help.get(command) {
-                    draw_text(&format!("↳ {} - {}\n", command, help), &context);
+                if let Some(help) = cmds_help.get(element) {
+                    draw_text(&format!("↳ {} - {}\n", element, help), &context);
                 } else {
                     draw_text(r#"\#FFC0C0Unrecognized command/subcommand. Valid subcommands are 'about'."#, &context);
                 }
@@ -190,7 +190,8 @@ fn echo(args: Vec<String>, context: &CanvasRenderingContext2d) {
 fn evl(args: Vec<String>, context: &CanvasRenderingContext2d) {
     if let Some(element) = args.get(0) {
         match eval(element) {
-            Some(Value) => draw_text(&format!("{}", Value), &context),
+            Ok(value) => draw_text(&format!("{}", value), &context),
+            Err(err) => draw_text(&format!("\\#FFC0C0Error in evaluating expression: {}", err), &context)
         }
         
     } else {
