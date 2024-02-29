@@ -82,12 +82,13 @@ pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
             cursor_pos.0 = 10.0;
             cursor_pos.1 += font_size + 4.0;
         } else {
-            for i in 0..text.len() {
+            for i in 0..text.chars().count() {
                 if hex_index > 0 {
                     hex_index -= 1;
                     continue;
                 }
-                let ch = text.chars().nth(i).unwrap();
+                console_log!("{}", text.len());
+                let ch = text.chars().nth(i).expect(&format!("ERROR: cant get char of '{}' at index {}", text, i));
                 if ch == '\\' {
                     let next_hex_chars = text.chars().skip(i + 1).take(7).collect::<String>();
                     if next_hex_chars.starts_with("#") {
