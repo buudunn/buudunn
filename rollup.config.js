@@ -1,12 +1,17 @@
-import { wasm } from '@rollup/plugin-wasm';
+import rust from "@wasm-tool/rollup-plugin-rust";
 
 export default {
-  input: 'index.js',
-  output: {
-    dir: 'output',
-    format: 'es',
-  },
-  plugins: [wasm({
-    targetEnv: "auto-inline"
-  })]
+    input: {
+        index: "Cargo.toml",
+    },
+    output: {
+      dir: "output",
+      format: "es" 
+    },
+    plugins: [
+        rust({
+          inlineWasm: true,
+          nodejs: false
+        }),
+    ],
 };

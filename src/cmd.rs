@@ -54,7 +54,6 @@ pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     lock_input();
     let mut args = parse_command(cmd_str).expect("Error parsing arguments. Is there an end quote missing?");
     let cmd = args.remove(0);
-    console_log!("{:?}", cmd);
 
     draw_text("\n", &context);
     let cmds = COMMANDS.lock().unwrap();
