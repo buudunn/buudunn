@@ -6,9 +6,9 @@ use lazy_static::lazy_static;
 use std::{sync::Mutex, collections::HashMap, str::FromStr};
 use once_cell::sync::Lazy;
 use eval::eval;
-use url::{Url, ParseError};
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, RequestMode, Response};
+//use url::{Url, ParseError};
+//use wasm_bindgen_futures::JsFuture;
+//use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[wasm_bindgen]
 extern "C" {
@@ -48,10 +48,10 @@ pub fn init_cmd() {
     help_map.insert("calc".to_string(), "Performs operations on 2 or more numbers.".to_string());
     map.insert("evl".to_string(), |arg, ctx| evl(arg, ctx));
     help_map.insert("evl".to_string(), "Evaluates an expression.".to_string());
-    map.insert("import".to_string(), |arg, ctx| import(arg, ctx));
-    help_map.insert("import".to_string(), "Imports remote commands. Internet required.".to_string());
+    //map.insert("import".to_string(), |arg, ctx| import(arg, ctx));
+    //help_map.insert("import".to_string(), "Imports remote commands. Internet required.".to_string());
     map.insert("abacus".to_string(), |arg, ctx| abacus(arg, ctx));
-    help_map.insert("abacus".to_string(), "Advanced mathematical operations. Implements libm.".to_string());
+    help_map.insert("abacus".to_string(), "Advanced mathematical operations. Implements multiple libraries, including meval and nalgebra.".to_string());
 
     drop(map);
     drop(help_map);
@@ -206,9 +206,9 @@ fn evl(args: Vec<String>, context: &CanvasRenderingContext2d) {
     }
 }
 
-fn import(args: Vec<String>, context: &CanvasRenderingContext2d) {
+/*fn import(args: Vec<String>, context: &CanvasRenderingContext2d) {
     draw_text("Sorry! This isn't finished yet!", context);
-    /*if let Some(element) = args.get(0) {
+    if let Some(element) = args.get(0) {
         match Url::parse(args.get(0).expect("error")) {
     Ok(_someurl) => {
     let mut opts = RequestInit::new();
@@ -231,9 +231,31 @@ fn import(args: Vec<String>, context: &CanvasRenderingContext2d) {
     }
 } else {
     draw_text(r#"\#FFC0C0No URL given. Make sure it's wrapped in quotes."#, &context);
-}*/
 }
+}*/
 
 fn abacus(args: Vec<String>, context: &CanvasRenderingContext2d) {
-
+    if let Some(_elem) = args.get(0) {
+        match args.get(0).expect("error").as_str() {
+            "eval" => {
+                if let Some(expr) = args.get(1) {
+                    /*if let Some(mcontext) = args.get(2) {
+                        match meval::eval_str(expr) {
+                            Ok(value) => draw_text(&format!("{}", value), &context),
+                            Err(err) => draw_text(&format!("\\#FFC0C0Couldn't evaluate expression: {}", err), &context)
+                        }
+                    }*/
+                    match meval::eval_str(expr) {
+                        Ok(value) => draw_text(&format!("{}", value), &context),
+                        Err(err) => draw_text(&format!("\\#FFC0C0Couldn't evaluate expression: {}", err), &context)
+                    }
+                } else {
+                    draw_text(r#"\#FFC0C0No expression given! Is it wrapped in quotes?"#, &context);
+                }
+            },
+            &_ => draw_text(r#"\#FFC0C0Invalid operation."#, &context)
+        }
+    } else {
+        draw_text(r#"\#FFC0C0No operation given."#, &context);
+    }
 }
