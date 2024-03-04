@@ -6,5 +6,7 @@ export default {
     dir: 'output',
     format: 'es',
   },
-  plugins: [wasm()]
+  plugins: [wasm({
+    targetEnv: "auto-inline"
+  })]
 };

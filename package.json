@@ -3,6 +3,7 @@
         "build": "rollup",
         "serve": "webpack serve"
     },
+    "type": "module",
     "devDependencies": {
         "@rollup/plugin-wasm": "^6.2.2",
         "@wasm-tool/wasm-pack-plugin": "1.5.0",
