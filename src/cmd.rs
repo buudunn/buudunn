@@ -6,6 +6,9 @@ use lazy_static::lazy_static;
 use std::{sync::Mutex, collections::HashMap, str::FromStr};
 use once_cell::sync::Lazy;
 use eval::eval;
+use url::{Url, ParseError};
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[wasm_bindgen]
 extern "C" {
@@ -45,6 +48,10 @@ pub fn init_cmd() {
     help_map.insert("calc".to_string(), "Performs operations on 2 or more numbers.".to_string());
     map.insert("evl".to_string(), |arg, ctx| evl(arg, ctx));
     help_map.insert("evl".to_string(), "Evaluates an expression.".to_string());
+    map.insert("import".to_string(), |arg, ctx| import(arg, ctx));
+    help_map.insert("import".to_string(), "Imports remote commands. Internet required.".to_string());
+    map.insert("abacus".to_string(), |arg, ctx| abacus(arg, ctx));
+    help_map.insert("abacus".to_string(), "Advanced mathematical operations. Implements libm.".to_string());
 
     drop(map);
     drop(help_map);
@@ -54,6 +61,7 @@ pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     lock_input();
     let mut args = parse_command(cmd_str).expect("Error parsing arguments. Is there an end quote missing?");
     let cmd = args.remove(0);
+    console_log!("{:?}", cmd);
 
     draw_text("\n", &context);
     let cmds = COMMANDS.lock().unwrap();
@@ -196,4 +204,36 @@ fn evl(args: Vec<String>, context: &CanvasRenderingContext2d) {
     } else {
         draw_text(r#"\#FFC0C0No expression given. Make sure it's wrapped in quotes."#, &context);
     }
+}
+
+fn import(args: Vec<String>, context: &CanvasRenderingContext2d) {
+    draw_text("Sorry! This isn't finished yet!", context);
+    /*if let Some(element) = args.get(0) {
+        match Url::parse(args.get(0).expect("error")) {
+    Ok(_someurl) => {
+    let mut opts = RequestInit::new();
+    opts.method("GET");
+    opts.mode(RequestMode::Cors);
+
+    let request = Request::new_with_str_and_init(&args.get(0).expect("error"), &opts);
+
+    let window = web_sys::window().unwrap();
+    let resp_value = window.fetch_with_str(&args.get(0).expect("error"));
+
+    // `resp_value` is a `Response` object.
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+
+    // Convert this other `Promise` into a rust `Future`.
+    let json = resp.json().expect("error").expect("error");
+    },
+    Err(err) => draw_text(&format!("\\#FFC0C0Error in parsing URL: {}", err), &context)
+    }
+} else {
+    draw_text(r#"\#FFC0C0No URL given. Make sure it's wrapped in quotes."#, &context);
+}*/
+}
+
+fn abacus(args: Vec<String>, context: &CanvasRenderingContext2d) {
+
 }

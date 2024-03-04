@@ -32,7 +32,7 @@ macro_rules! console_log {
 }
 
 #[wasm_bindgen(start)]
-fn main() -> Result<(), JsValue> {
+fn start() {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
     init_cmd();
     let window = web_sys::window().unwrap();
@@ -111,5 +111,4 @@ To learn more, type \#FFFF00'help about'\#FFFFFF. To get a list of commands, typ
     );
     window.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
     closure.forget();
-    Ok(())
 }
