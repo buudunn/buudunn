@@ -2,11 +2,10 @@ use crate::utils::*;
 use wasm_bindgen::prelude::*;
 use comma::parse_command;
 use web_sys::CanvasRenderingContext2d;
-use lazy_static::lazy_static;
-use std::{sync::Mutex, collections::HashMap, str::FromStr};
+use std::{sync::Mutex, collections::HashMap};
 use once_cell::sync::Lazy;
 use eval::eval;
-use good_lp::{default_solver, SolverModel, Solution, Constraint, Expression, Variable, variable, variables};
+use good_lp::{default_solver, SolverModel, Solution, Expression, Variable, variable, variables};
 //use url::{Url, ParseError};
 //use wasm_bindgen_futures::JsFuture;
 //use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -288,18 +287,30 @@ fn abacus(args: Vec<String>, context: &CanvasRenderingContext2d) {
 fn parse_coefficients(input_string: &str) -> HashMap<String, f64> {
     let mut map: HashMap<String, f64> = HashMap::new();
     let terms: Vec<&str> = input_string.split(|c| c == '+' || c == '=').collect();
+    console_log!("{:?}", terms);
     for term in terms {
         let cleaned_term = term.trim().replace(" ", "");
-        let parts: Vec<&str> = cleaned_term.splitn(2, char::is_alphabetic).collect();
+        console_log!("{:?}", cleaned_term);
+        let mut parts: Vec<&str> = cleaned_term.splitn(2, char::is_alphabetic).collect();
+        if parts.iter().all(|s| s.is_empty()) {parts = vec![&cleaned_term]}
+        console_log!("{:?}", parts);
         if parts.len() == 2 {
-            let mut varb = parts[0].chars().next().unwrap().to_string();
+            let varb = parts[0].chars().next().unwrap().to_string();
             let coefficient = parts[0].parse().unwrap_or(1.0);
             let current_coefficient = map.entry(varb.clone()).or_insert(0.0);
             *current_coefficient += coefficient;
         } else {
+            if cleaned_term.chars().all(|c| c.is_alphabetic()) {
+                let varb = parts[0].chars().next().unwrap().to_string();
+                let coefficient = 1.0;
+                let current_coefficient = map.entry(varb.clone()).or_insert(0.0);
+                *current_coefficient += coefficient;
+            } else {
             let constant: f64 = cleaned_term.parse().unwrap();
             let current_constant = map.entry("constant".to_string()).or_insert(0.0);
             *current_constant += constant;
+            
+        }
         }
     }
     map

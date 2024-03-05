@@ -25,7 +25,7 @@ wasm-bindgen-futures = "0.4.42"
 eval = "0.4.3"
 url = "2.5.0"
 meval = "0.2.0"
-good_lp = { version = "1.7.0", features = ["lp-solvers"], default-features = false }
+good_lp = { version = "1.7.0", features = ["minilp"], default-features = false }
 
 [dependencies.web-sys]
 version = "0.3.4"
