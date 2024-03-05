@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use std::{sync::Mutex, collections::HashMap, str::FromStr};
 use once_cell::sync::Lazy;
 use eval::eval;
+use good_lp::{default_solver, SolverModel, Solution, Constraint, Expression, Variable, variable, variables};
 //use url::{Url, ParseError};
 //use wasm_bindgen_futures::JsFuture;
 //use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -59,7 +60,8 @@ pub fn init_cmd() {
 
 pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     lock_input();
-    let mut args = parse_command(cmd_str).expect("Error parsing arguments. Is there an end quote missing?");
+    if cmd_str.trim().is_empty() {return}
+    if let Some(mut args) = parse_command(cmd_str) {
     let cmd = args.remove(0);
     console_log!("{:?}", cmd);
 
@@ -72,6 +74,11 @@ pub fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) {
     } else {
         draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
     }
+} else {
+    draw_text(r#"
+\#FFC0C0Error parsing arguments. Is there an end quote missing?"#, &context)
+}
+    
 }
 
 fn help(args: Vec<String>, context: &CanvasRenderingContext2d) {
@@ -239,16 +246,34 @@ fn abacus(args: Vec<String>, context: &CanvasRenderingContext2d) {
         match args.get(0).expect("error").as_str() {
             "eval" => {
                 if let Some(expr) = args.get(1) {
-                    /*if let Some(mcontext) = args.get(2) {
-                        match meval::eval_str(expr) {
-                            Ok(value) => draw_text(&format!("{}", value), &context),
-                            Err(err) => draw_text(&format!("\\#FFC0C0Couldn't evaluate expression: {}", err), &context)
-                        }
-                    }*/
                     match meval::eval_str(expr) {
                         Ok(value) => draw_text(&format!("{}", value), &context),
                         Err(err) => draw_text(&format!("\\#FFC0C0Couldn't evaluate expression: {}", err), &context)
                     }
+                } else {
+                    draw_text(r#"\#FFC0C0No expression given! Is it wrapped in quotes?"#, &context);
+                }
+            },
+            "solve" => {
+                if let Some(expr) = args.get(1) {
+                    // Parse the input string to extract coefficients and constants
+    let coefficients: HashMap<String, f64> = parse_coefficients(expr);
+
+    // Set up the linear programming problem
+    let mut objective: Expression = Default::default();
+    let mut vars = variables!();
+    let varmap: HashMap<String, Variable> = coefficients.keys().map(|var| (var.clone(), vars.add(variable()))).collect();
+    for (variable, coefficient) in coefficients.iter() {
+        let var = varmap[variable];
+        objective += var * *coefficient;
+    }
+    // Solve the linear programming problem
+    let solution = vars.maximise(objective).using(default_solver).solve().unwrap();
+
+    // Print the solutions for each variable
+    for (variable, var) in varmap.iter() {
+        draw_text(&format!("{} = {}", variable, solution.value(*var)), &context);
+    }
                 } else {
                     draw_text(r#"\#FFC0C0No expression given! Is it wrapped in quotes?"#, &context);
                 }
@@ -258,4 +283,24 @@ fn abacus(args: Vec<String>, context: &CanvasRenderingContext2d) {
     } else {
         draw_text(r#"\#FFC0C0No operation given."#, &context);
     }
+}
+
+fn parse_coefficients(input_string: &str) -> HashMap<String, f64> {
+    let mut map: HashMap<String, f64> = HashMap::new();
+    let terms: Vec<&str> = input_string.split(|c| c == '+' || c == '=').collect();
+    for term in terms {
+        let cleaned_term = term.trim().replace(" ", "");
+        let parts: Vec<&str> = cleaned_term.splitn(2, char::is_alphabetic).collect();
+        if parts.len() == 2 {
+            let mut varb = parts[0].chars().next().unwrap().to_string();
+            let coefficient = parts[0].parse().unwrap_or(1.0);
+            let current_coefficient = map.entry(varb.clone()).or_insert(0.0);
+            *current_coefficient += coefficient;
+        } else {
+            let constant: f64 = cleaned_term.parse().unwrap();
+            let current_constant = map.entry("constant".to_string()).or_insert(0.0);
+            *current_constant += constant;
+        }
+    }
+    map
 }
