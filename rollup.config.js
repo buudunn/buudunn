@@ -2,11 +2,11 @@ import rust from "@wasm-tool/rollup-plugin-rust";
 
 export default {
     input: {
-        index: "Cargo.toml",
+        index: "index.js",
     },
     output: {
       dir: "output",
-      format: "es" 
+      format: "iife" 
     },
     plugins: [
         rust({

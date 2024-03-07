@@ -6,6 +6,7 @@ use std::f64;
 use wasm_bindgen::prelude::*;
 use console_error_panic_hook;
 use std::panic;
+use wasm_bindgen::JsValue;
 
 #[wasm_bindgen]
 extern "C" {
@@ -32,9 +33,9 @@ macro_rules! console_log {
 }
 
 #[wasm_bindgen(start)]
-fn start() {
+async fn start() {
+    lock_input();
     panic::set_hook(Box::new(console_error_panic_hook::hook));
-    init_cmd();
     let window = web_sys::window().unwrap();
     let document = window.document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap();
@@ -58,9 +59,10 @@ fn start() {
     context.set_fill_style(&JsValue::from_str("#FFFFFF"));
     context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
     context.set_font("14px Gohu");
+    let map = init_cmd();
 
-    let welcome_text =
-        r#" ____                  _                   
+    let welcome_text = 
+r#" ____                  _                   
 | __ ) _   _ _   _  __| |_   _ _ __  _ __
 |  _ \| | | | | | |/ _` | | | | '_ \| '_ \
 | |_) | |_| | |_| | (_| | |_| | | | | | | |
@@ -72,18 +74,19 @@ To learn more, type \#FFFF00'help about'\#FFFFFF. To get a list of commands, typ
 
 "#;
 
-    let user = "guest";
-    let host = "local";
-    let cwd = "~/";
-
+    let user = USER.lock().unwrap().clone();
+    let host = HOST.lock().unwrap().clone();
+    let cwd = CWD.lock().unwrap().clone();
     draw_text(welcome_text, &context);
     draw_text(&format!("\\#90EE90{}@{}: \\#FFFFFF\\#ADD8E6{}\\#FFFFFF \\#FFFF00$ \\#FFFFFF", user, host, cwd), &context);
     lock_cursor_here();
     unlock_input();
+}
 
-    let closure = Closure::wrap(
-        Box::new(move |event: web_sys::KeyboardEvent| {
-            event.prevent_default();
+#[wasm_bindgen]
+pub async fn keydownhandler(event: web_sys::KeyboardEvent, context: &web_sys::CanvasRenderingContext2d) {
+    event.prevent_default();
+
             let key = event.key();
 
             if !get_is_input_locked() {
@@ -95,9 +98,13 @@ To learn more, type \#FFFF00'help about'\#FFFFFF. To get a list of commands, typ
                     draw_text("\n", &context);
                     add_to_cmd_bank("\n");
                 } else {
-                    pass_cmd(&get_cmd_bank(), &context);
+                    let cmd = &get_cmd_bank();
                     clear_cmd_bank();
+                    let _ = pass_cmd(cmd, &context).await;
                     draw_text("\n", &context);
+                    let user = USER.lock().unwrap().clone();
+                    let host = HOST.lock().unwrap().clone();
+                    let cwd = CWD.lock().unwrap().clone();
                     draw_text(&format!("\\#90EE90{}@{}: \\#FFFFFF\\#ADD8E6{}\\#FFFFFF \\#FFFF00$ \\#FFFFFF", user, host, cwd), &context);
                     lock_cursor_here();
                     unlock_input();
@@ -107,8 +114,4 @@ To learn more, type \#FFFF00'help about'\#FFFFFF. To get a list of commands, typ
                 remove_last_from_cmd_bank();
             }
         }
-        }) as Box<dyn FnMut(_)>
-    );
-    window.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
-    closure.forget();
 }

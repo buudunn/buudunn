@@ -1,7 +1,8 @@
 {
     "scripts": {
         "build": "rollup -c",
-        "serve": "webpack serve"
+        "serve": "static-server -p 1337",
+        "host": "npm run build && npm run serve"
     },
     "type": "module",
     "devDependencies": {
@@ -9,12 +10,11 @@
         "@wasm-tool/rollup-plugin-rust": "^2.4.5",
         "@wasm-tool/wasm-pack-plugin": "1.5.0",
         "html-webpack-plugin": "^5.3.2",
+        "rollup": "^4.12.1",
+        "static-server": "^2.2.1",
         "text-encoding": "^0.7.0",
         "webpack": "^5.49.0",
         "webpack-cli": "^4.10.0",
         "webpack-dev-server": "^4.15.1"
-    },
-    "dependencies": {
-        "rollup": "^4.12.0"
     }
 }

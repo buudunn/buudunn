@@ -87,7 +87,6 @@ pub fn draw_text(text: &str, context: &web_sys::CanvasRenderingContext2d) {
                     hex_index -= 1;
                     continue;
                 }
-                console_log!("{}", text.len());
                 let ch = text.chars().nth(i).expect(&format!("ERROR: cant get char of '{}' at index {}", text, i));
                 if ch == '\\' {
                     let next_hex_chars = text.chars().skip(i + 1).take(7).collect::<String>();
@@ -141,7 +140,6 @@ pub fn backspace(context: &web_sys::CanvasRenderingContext2d) {
         context.fill_rect(cursor_pos.0, cursor_pos.1 - font_size, font_size / 2.0, font_size + 4.0);
         context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
         context.set_fill_style(&JsValue::from_str("#FFFFFF"));
-        console_log!("x: {} y: {}", cursor_pos.0, cursor_pos.1);
         *CURSOR_POS.lock().unwrap() = (cursor_pos.0, cursor_pos.1); // Update the global cursor x and y value
     }
 }
