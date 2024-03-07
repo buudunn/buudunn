@@ -2,7 +2,7 @@ use crate::utils::*;
 use wasm_bindgen::prelude::*;
 use comma::parse_command;
 use web_sys::CanvasRenderingContext2d;
-use std::{sync::Mutex, collections::HashMap, any::Any, future::Future};
+use std::{sync::Mutex, collections::HashMap, any::Any, future::Future, sync::Arc};
 use once_cell::sync::Lazy;
 use eval::eval;
 //use url::{Url, ParseError};
@@ -35,19 +35,19 @@ pub static USER: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("guest"));
 pub static HOST: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("local"));
 pub static CWD: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("~/"));
 
-static COMMANDS: Lazy<Mutex<HashMap<String, Box<dyn Any + Send>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static COMMANDS: Lazy<Mutex<HashMap<String, Arc<dyn Any + Send>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 static COMMANDS_HELP: Lazy<Mutex<HashMap<String, Vec<&str>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn init_cmd() {
     let mut map = COMMANDS.lock().unwrap();
     let mut help_map = COMMANDS_HELP.lock().unwrap();
-    map.insert("help".to_string(), Box::new(help));
+    map.insert("help".to_string(), Arc::new(help));
     help_map.insert("help".to_string(), vec!("Displays help.", "\nUsage: help [?subcommand]"));
-    map.insert("echo".to_string(), Box::new(echo));
+    map.insert("echo".to_string(), Arc::new(echo));
     help_map.insert("echo".to_string(), vec!("Prints input to the console.", "\nUsage: echo \"string\""));
-    map.insert("calc".to_string(), Box::new(calc));
+    map.insert("calc".to_string(), Arc::new(calc));
     help_map.insert("calc".to_string(), vec!("Performs operations on 2 or more numbers.", "\nUsage: calc [operation] [number 1, 2, 3...]"));
-    map.insert("evl".to_string(), Box::new(evl));
+    map.insert("evl".to_string(), Arc::new(evl));
     help_map.insert("evl".to_string(), vec!("Evaluates an expression.", "\nUsage: evl \"expression\""));
     //map.insert("import".to_string(), |arg, ctx| import(arg, ctx));
     //help_map.insert("import".to_string(), "Imports remote commands. Internet required.".to_string());
@@ -68,14 +68,14 @@ pub async fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) -> Resu
     draw_text("\n", &context);
     let cmds = COMMANDS.lock().unwrap();
     
-    if let Some(command_box) = cmds.get(&cmd.to_string().to_lowercase()) {
-        if let Some(command) = command_box.downcast_ref::<fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>>() {
-            let _ = command(args, &context);
+    if let Some(command) = cmds.get(&cmd.to_string().to_lowercase()) {
+        //if let Some(command) = command_box.downcast_ref::<fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>>() {
+            let _ = *command.downcast::<fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>>().unwrap()(args, &context);
             drop(cmds);
-        } else {
+        /*} else {
             draw_text(r#"\#FFC0C0Unrecognized command 2. Type 'help' for a list of commands."#, &context);
             return Ok(true.into());
-        }
+        }*/
     } else {
         draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
         return Ok(true.into());
