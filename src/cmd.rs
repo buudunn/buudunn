@@ -30,20 +30,49 @@ macro_rules! console_log {
     // `bare_bones`
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()));
 }
+struct CmdContainer<'a, F: ?Sized + 'a>
+where
+    F: Fn(Vec<String>, &CanvasRenderingContext2d) -> Box<dyn Future<Output = Result<JsValue, JsValue>>>,
+{
+    func: &'a F,
+}
+
+impl<F> CmdContainer<'static, F>
+where
+    F: Fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>,
+{
+    fn new(func: F) -> CmdContainer<'static, F> {
+        CmdContainer { func: &func }
+    }
+}
+
+trait CmdCaller {
+    fn call(&self, args: Vec<String>, context: &CanvasRenderingContext2d) -> Box<dyn Future<Output = Result<JsValue, JsValue>>>;
+}
+
+impl<F> CmdCaller for CmdContainer<'static, F>
+where
+    F: Fn(Vec<String>, &CanvasRenderingContext2d) -> Box<dyn Future<Output = Result<JsValue, JsValue>>>,
+{
+    async fn call(&self, args: Vec<String>, context: &CanvasRenderingContext2d) -> Box<dyn Future<Output = Result<JsValue, JsValue>>> {
+        // Call the function inside the CmdContainer
+        (self.func)(args, &context)
+    }
+}
 
 pub static USER: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("guest"));
 pub static HOST: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("local"));
 pub static CWD: Lazy<Mutex<&str>> = Lazy::new(|| Mutex::new("~/"));
 
-static COMMANDS: Lazy<Mutex<HashMap<String, Arc<dyn Any + Send>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
+static COMMANDS: Lazy<Mutex<HashMap<String, Box<dyn CmdCaller + Send + Sync>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 static COMMANDS_HELP: Lazy<Mutex<HashMap<String, Vec<&str>>>> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub fn init_cmd() {
     let mut map = COMMANDS.lock().unwrap();
     let mut help_map = COMMANDS_HELP.lock().unwrap();
-    map.insert("help".to_string(), Arc::new(help));
+    map.insert("help".to_string(), Box::new(CmdContainer { func: &help }));
     help_map.insert("help".to_string(), vec!("Displays help.", "\nUsage: help [?subcommand]"));
-    map.insert("echo".to_string(), Arc::new(echo));
+    /*map.insert("echo".to_string(), Arc::new(echo));
     help_map.insert("echo".to_string(), vec!("Prints input to the console.", "\nUsage: echo \"string\""));
     map.insert("calc".to_string(), Arc::new(calc));
     help_map.insert("calc".to_string(), vec!("Performs operations on 2 or more numbers.", "\nUsage: calc [operation] [number 1, 2, 3...]"));
@@ -52,7 +81,7 @@ pub fn init_cmd() {
     //map.insert("import".to_string(), |arg, ctx| import(arg, ctx));
     //help_map.insert("import".to_string(), "Imports remote commands. Internet required.".to_string());
     map.insert("abacus".to_string(), Box::new(abacus));
-    help_map.insert("abacus".to_string(), vec!("Advanced mathematical operations.", "Implements multiple meval.\nUsage: abacus [operation] \"args\""));
+    help_map.insert("abacus".to_string(), vec!("Advanced mathematical operations.", "Implements multiple meval.\nUsage: abacus [operation] \"args\""));*/
     
     drop(map);
     drop(help_map);
@@ -69,13 +98,10 @@ pub async fn pass_cmd(cmd_str: &str, context: &CanvasRenderingContext2d) -> Resu
     let cmds = COMMANDS.lock().unwrap();
     
     if let Some(command) = cmds.get(&cmd.to_string().to_lowercase()) {
-        //if let Some(command) = command_box.downcast_ref::<fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>>() {
-            let _ = *command.downcast::<fn(Vec<String>, &CanvasRenderingContext2d) -> Result<JsValue, JsValue>>().unwrap()(args, &context);
-            drop(cmds);
-        /*} else {
-            draw_text(r#"\#FFC0C0Unrecognized command 2. Type 'help' for a list of commands."#, &context);
-            return Ok(true.into());
-        }*/
+        async {
+            let _ = (*command).call(args, &context);
+        }.await;
+        drop(cmds);
     } else {
         draw_text(r#"\#FFC0C0Unrecognized command. Type 'help' for a list of commands."#, &context);
         return Ok(true.into());

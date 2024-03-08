@@ -59,7 +59,7 @@ async fn start() {
     context.set_fill_style(&JsValue::from_str("#FFFFFF"));
     context.set_stroke_style(&JsValue::from_str("#FFFFFF"));
     context.set_font("14px Gohu");
-    let map = init_cmd();
+    init_cmd();
 
     let welcome_text = 
 r#" ____                  _                   
