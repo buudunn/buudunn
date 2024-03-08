@@ -7,6 +7,7 @@ use once_cell::sync::Lazy;
 use eval::eval;
 //use url::{Url, ParseError};
 
+
 #[wasm_bindgen]
 extern "C" {
     // Use `js_namespace` here to bind `console.log(..)` instead of just
